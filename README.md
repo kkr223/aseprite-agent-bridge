@@ -1,5 +1,7 @@
 # Aseprite MCP Bridge
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 Control a live Aseprite session from Codex or another MCP-compatible agent.
 The agent can inspect documents, edit pixels, manage layers and frames, save
 or export files, and receive the active frame as a PNG preview.
