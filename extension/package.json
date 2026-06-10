@@ -1,0 +1,22 @@
+{
+  "name": "aseprite-ws-bridge",
+  "displayName": "Aseprite WebSocket Bridge",
+  "description": "Expose a safe command API for controlling the active Aseprite session over WebSocket.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Aseprite WS Bridge Contributors"
+  },
+  "publisher": "local",
+  "license": "MIT",
+  "categories": [
+    "Scripts"
+  ],
+  "contributes": {
+    "scripts": [
+      {
+        "path": "./main.lua"
+      }
+    ]
+  }
+}
+
