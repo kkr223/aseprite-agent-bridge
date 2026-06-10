@@ -2,7 +2,8 @@ local Commands = {}
 Commands.__index = Commands
 
 local function requireTable(value, name)
-  if type(value) ~= "table" then
+  local valueType = type(value)
+  if valueType ~= "table" and valueType ~= "userdata" then
     error(name .. " must be an object or array")
   end
   return value
@@ -85,14 +86,28 @@ local function parseColor(value)
   }
 end
 
-local function getOrCreateCel(sprite, layer, frame)
+local function requireWritableImageLayer(layer)
+  if not layer
+      or not layer.isImage
+      or layer.isTilemap
+      or layer.isReference
+      or not layer.isEditable then
+    error("A writable image layer must be selected")
+  end
+  return layer
+end
+
+local function getCanvasCelImage(sprite, layer, frame)
   local cel = layer:cel(frame)
-  if cel then
-    return cel
+  if not cel then
+    local image = Image(sprite.width, sprite.height, sprite.colorMode)
+    cel = sprite:newCel(layer, frame, image, Point(0, 0))
+    return cel, image
   end
 
   local image = Image(sprite.width, sprite.height, sprite.colorMode)
-  return sprite:newCel(layer, frame, image, Point(0, 0))
+  image:drawImage(cel.image, cel.position)
+  return cel, image
 end
 
 local function layerState(layer, index)
@@ -232,31 +247,26 @@ end
 
 handlers.draw_pixels = function(args)
   local sprite = activeSprite()
-  local layer = args.layer and requireLayer(sprite, args.layer) or app.activeLayer
-  if not layer or layer.isGroup then
-    error("A writable image layer must be selected")
-  end
+  local layer = requireWritableImageLayer(
+    args.layer and requireLayer(sprite, args.layer) or app.activeLayer
+  )
   local frame = args.frame and requireFrame(sprite, args.frame) or app.activeFrame
   local pixels = requireTable(args.pixels, "pixels")
   local written = 0
 
   app.transaction("AI: Draw Pixels", function()
-    local cel = getOrCreateCel(sprite, layer, frame)
-    local image = cel.image:clone()
+    local cel, image = getCanvasCelImage(sprite, layer, frame)
     for index, pixel in ipairs(pixels) do
       requireTable(pixel, "pixels[" .. index .. "]")
       local x = requireInteger(pixel.x, "pixels[" .. index .. "].x")
       local y = requireInteger(pixel.y, "pixels[" .. index .. "].y")
       if x >= 0 and y >= 0 and x < sprite.width and y < sprite.height then
-        image:drawPixel(
-          x - cel.position.x,
-          y - cel.position.y,
-          parseColor(pixel.color)
-        )
+        image:drawPixel(x, y, parseColor(pixel.color))
         written = written + 1
       end
     end
     cel.image = image
+    cel.position = Point(0, 0)
   end)
 
   app.activeLayer = layer
@@ -267,10 +277,9 @@ end
 
 handlers.fill_rect = function(args)
   local sprite = activeSprite()
-  local layer = args.layer and requireLayer(sprite, args.layer) or app.activeLayer
-  if not layer or layer.isGroup then
-    error("A writable image layer must be selected")
-  end
+  local layer = requireWritableImageLayer(
+    args.layer and requireLayer(sprite, args.layer) or app.activeLayer
+  )
   local frame = args.frame and requireFrame(sprite, args.frame) or app.activeFrame
   local x = requireInteger(args.x, "x")
   local y = requireInteger(args.y, "y")
@@ -279,18 +288,10 @@ handlers.fill_rect = function(args)
   local color = parseColor(args.color)
 
   app.transaction("AI: Fill Rectangle", function()
-    local cel = getOrCreateCel(sprite, layer, frame)
-    local image = cel.image:clone()
-    image:clear(
-      Rectangle(
-        x - cel.position.x,
-        y - cel.position.y,
-        width,
-        height
-      ),
-      color
-    )
+    local cel, image = getCanvasCelImage(sprite, layer, frame)
+    image:clear(Rectangle(x, y, width, height), color)
     cel.image = image
+    cel.position = Point(0, 0)
   end)
 
   app.activeLayer = layer
@@ -350,6 +351,23 @@ handlers.export = function(args)
   local filename = requireString(args.filename, "filename")
   sprite:saveCopyAs(filename)
   return { filename = filename }
+end
+
+handlers.render_preview = function(args)
+  local sprite = activeSprite()
+  local filename = requireString(args.filename, "filename")
+  local image = Image(sprite)
+  image:saveAs(filename)
+
+  local activeFrame = app.activeFrame
+  local activeLayer = app.activeLayer
+  return {
+    filename = filename,
+    width = sprite.width,
+    height = sprite.height,
+    activeFrame = activeFrame and activeFrame.frameNumber or nil,
+    activeLayer = activeLayer and activeLayer.name or nil
+  }
 end
 
 function Commands.new()

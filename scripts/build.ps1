@@ -2,6 +2,7 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $extensionRoot = Join-Path $repoRoot "extension"
+$serverRoot = Join-Path $repoRoot "server"
 $buildRoot = Join-Path $repoRoot "build"
 $distRoot = Join-Path $repoRoot "dist"
 $stagingRoot = Join-Path $buildRoot "aseprite-ws-bridge"
@@ -22,5 +23,10 @@ Copy-Item -Path (Join-Path $extensionRoot "*") -Destination $stagingRoot -Recurs
 Compress-Archive -Path (Join-Path $stagingRoot "*") -DestinationPath $zipPath
 Move-Item -Path $zipPath -Destination $extensionPath
 
-Write-Output $extensionPath
+& npm --prefix $serverRoot run build
+if ($LASTEXITCODE -ne 0) {
+  throw "MCP server build failed"
+}
 
+Write-Output "Extension: $extensionPath"
+Write-Output "MCP server: $(Join-Path $serverRoot 'dist\index.js')"

@@ -1,4 +1,6 @@
 build/
 dist/
 *.aseprite-extension
-
+server/node_modules/
+server/dist/
+server/dist-test/

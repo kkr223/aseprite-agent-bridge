@@ -70,9 +70,14 @@ Failure:
 | `save` | none |
 | `save_as` | `filename` |
 | `export` | `filename` |
+| `render_preview` | temporary PNG `filename` |
 
 Coordinates are zero-based sprite coordinates. Frame numbers are one-based.
 Colors use `RRGGBB` or `RRGGBBAA`, optionally prefixed with `#`.
+
+`render_preview` renders the active frame to a standalone PNG without changing
+the sprite filename or save state. It is intended for trusted local MCP
+servers, which should create and remove the temporary file.
 
 Example:
 
@@ -90,4 +95,3 @@ Example:
   }
 }
 ```
-

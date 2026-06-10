@@ -3,6 +3,11 @@ Bridge.__index = Bridge
 
 local PROTOCOL_VERSION = "1.0"
 
+local function isJsonContainer(value)
+  local valueType = type(value)
+  return valueType == "table" or valueType == "userdata"
+end
+
 local function makeResponse(id, ok, payload)
   local response = {
     id = id,
@@ -52,7 +57,7 @@ end
 
 function Bridge:handleText(data)
   local decoded, request = pcall(json.decode, data)
-  if not decoded or type(request) ~= "table" then
+  if not decoded or not isJsonContainer(request) then
     self:sendError(nil, "invalid_json", "Message must be a JSON object")
     return
   end
@@ -112,12 +117,17 @@ end
 function Bridge:connect()
   self:disconnect()
 
-  self.socket = WebSocket {
+  local socket
+  socket = WebSocket {
     url = self.getUrl(),
     deflate = false,
     minreconnectwait = 1,
     maxreconnectwait = 10,
     onreceive = function(messageType, data, errorMessage)
+      if self.socket ~= socket then
+        return
+      end
+
       local ok, message = pcall(
         self.handleEvent,
         self,
@@ -130,14 +140,16 @@ function Bridge:connect()
       end
     end
   }
-  self.socket:connect()
+  self.socket = socket
+  socket:connect()
 end
 
 function Bridge:disconnect()
+  local socket = self.socket
+  self.socket = nil
   self.connected = false
-  if self.socket then
-    self.socket:close()
-    self.socket = nil
+  if socket then
+    socket:close()
   end
 end
 

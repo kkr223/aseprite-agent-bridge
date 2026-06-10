@@ -1,0 +1,14 @@
+interface:
+  display_name: "Aseprite Agent"
+  short_description: "Create and edit pixel art in Aseprite via MCP"
+  default_prompt: "Use $aseprite-agent to create or edit pixel art in Aseprite and verify the result with a preview."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "aseprite"
+      description: "Control a live Aseprite session and retrieve PNG previews"
+      transport: "stdio"
+
+policy:
+  allow_implicit_invocation: true
